@@ -2,7 +2,9 @@ CC = as
 LD = ld
 CFLAGS = --64
 
-all: expr
+all: debug
+
+release: expr
 
 debug: CFLAGS += -gdwarf-2
 debug: expr
