@@ -1,11 +1,11 @@
 .section .rodata
 
-prompt:		.ascii "x = \0"
-expr_ge16:	.ascii "(x - 11)^2 + 125 = \0"
-expr_l16:	.ascii "x^2 + 72x + 6400 = \0"
+prompt:		.string "x = "
+expr_ge16:	.string "(x - 11)^2 + 125 = "
+expr_l16:	.string "x^2 + 72x + 6400 = "
 
-err_read:	.ascii "Could not read the input!\n\0"
-err_nan:	.ascii "You should enter a non-negative integer!\n\0"
+err_read:	.string "Could not read the input!\n"
+err_nan:	.string "You should enter a non-negative integer!\n"
 
 .section .data
 
