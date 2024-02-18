@@ -41,13 +41,17 @@ _start:
 	movb $0, (%rax)		# trim newline
 
 	movw (buf), %ax
-	cmp $0x3C, %al		# <x
+	cmp $'<', %al		# <x
 	je .ilx
-	cmp $0x3E, %al		# >x
+	cmp $'=', %al		# =x
+	je .iex
+	cmp $'>', %al		# >x
 	je .igx
+	cmp $'!', %al		# !x
+	je .inx
 	jmp _start
 .ilx:
-	cmp $0x3D, %ah		# <=
+	cmp $'=', %ah		# <=
 	je .ile
 	cmp $0, %ah		# <
 	je .il
@@ -59,7 +63,7 @@ _start:
 		mov $fjl, %r15
 		jmp .cond_set
 .igx:
-	cmp $0x3D, %ah		# >=
+	cmp $'=', %ah		# >=
 	je .ige
 	cmp $0, %ah		# >
 	je .ig
@@ -70,6 +74,16 @@ _start:
 	.ig:
 		mov $fjg, %r15
 		jmp .cond_set
+.iex:
+	cmp $'=', %ah		# ==
+	jne _start
+	mov $fje, %r15
+	jmp .cond_set
+.inx:
+	cmp $'=', %ah		# !=
+	jne _start
+	mov $fjne, %r15
+	jmp .cond_set
 .cond_set:
 
 	/* value input */
