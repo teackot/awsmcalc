@@ -1,5 +1,7 @@
 .section .rodata
 
+cond_prompt:	.string "if x ... 16: "
+
 prompt:		.string "x = "
 expr_ge16:	.string "(x - 11)^2 + 125 = "
 expr_l16:	.string "x^2 + 72x + 6400 = "
@@ -17,6 +19,61 @@ inp_x:		.quad 1
 .section .text
 .global _start
 _start:
+	/* condition input */
+
+	# print the condition prompt
+	mov $cond_prompt, %rsi
+	call print
+
+	xor %rax, %rax		# read
+	xor %rdi, %rdi		# from stdin
+	mov $buf, %rsi		# into buf
+	mov $buf_len-1, %rdx	# at most buf_len chars (1b reserved tor \0)
+	syscall
+
+	add $buf-1, %rax	# point at \n (buf[rax-1])
+	cmpb $'\n', (%rax)
+	je .cond_read_success
+	mov $err_read, %rsi	# | no \n, panic with a read error
+	jmp panic		# |
+.cond_read_success:
+
+	movb $0, (%rax)		# trim newline
+
+	movw (buf), %ax
+	cmp $0x3C, %al		# <x
+	je .ilx
+	cmp $0x3E, %al		# >x
+	je .igx
+	jmp _start
+.ilx:
+	cmp $0x3D, %ah		# <=
+	je .ile
+	cmp $0, %ah		# <
+	je .il
+	jmp _start
+	.ile:
+		mov $fjle, %r15
+		jmp .cond_set
+	.il:
+		mov $fjl, %r15
+		jmp .cond_set
+.igx:
+	cmp $0x3D, %ah		# >=
+	je .ige
+	cmp $0, %ah		# >
+	je .ig
+	jmp _start
+	.ige:
+		mov $fjge, %r15
+		jmp .cond_set
+	.ig:
+		mov $fjg, %r15
+		jmp .cond_set
+.cond_set:
+
+	/* value input */
+
 	# print the prompt
 	mov $prompt, %rsi
 	call print
@@ -29,10 +86,11 @@ _start:
 
 	add $buf-1, %rax	# point at \n (buf[rax-1])
 	cmpb $'\n', (%rax)
-	je .read_success
+	je .x_read_success
 	mov $err_read, %rsi	# | no \n, panic with a read error
 	jmp panic		# |
-.read_success:
+.x_read_success:
+
 	movb $0, (%rax)		# trim newline
 
 	mov $buf, %rsi		# convert buf
@@ -46,10 +104,14 @@ _start:
 	jmp _start
 .u64_success:
 
-	cmp $16, %rax
-	jl .l16
-	
-.ge16:
+	mov $16, %rbx
+	mov $.imeets, %rcx
+	call *%r15
+	jmp .ielse
+	# cmp $16, %rax
+	# jl .l16
+
+.imeets:			# input meets the condition
 	pushq $expr_ge16	# use a register?
 
 	sub $11, %rax		# t = x - 11
@@ -58,7 +120,7 @@ _start:
 
 	jmp .done
 
-.l16:
+.ielse:
 	pushq $expr_l16		# use a register?
 
 	mov %rax, %rcx		# tmp %rcx = x
@@ -109,3 +171,39 @@ panic:
 	mov $60, %rax
 	mov $-1, %rdi
 	syscall
+
+/*
+ * fj* - check if the arguments meet a condition (a <=> b).
+ *       Basically a conditional jump as a function.
+ *
+ * Args: %rax - a
+ *       %rbx - b
+ *       %rcx - jmp address on success
+ */
+fjge:
+	cmp %rbx, %rax
+	jge .meets
+	ret
+fjg:
+	cmp %rbx, %rax
+	jg .meets
+	ret
+fje:
+	cmp %rbx, %rax
+	je .meets
+	ret
+fjne:
+	cmp %rbx, %rax
+	jne .meets
+	ret
+fjl:
+	cmp %rbx, %rax
+	jl .meets
+	ret
+fjle:
+	cmp %rbx, %rax
+	jle .meets
+	ret
+.meets:
+	sub $8, %rsp		# forget the return address
+	jmp *%rcx
