@@ -1,10 +1,14 @@
 .section .rodata
 
-cond_prompt:	.string "if x ... 16: "
+cond_prompt:	.string "if x "
 
 prompt:		.string "x = "
-expr_ge16:	.string "(x - 11)^2 + 125 = "
-expr_l16:	.string "x^2 + 72x + 6400 = "
+
+prefix_then:	.ascii  "then: "
+expr_meets:	.string "(x - 11)^2 + 125"
+prefix_else:	.ascii  "else: "
+expr_else:	.string "x^2 + 72x + 6400"
+result_sep:	.string " = "
 
 err_read:	.string "Could not read the input!\n"
 err_nan:	.string "You should enter an integer!\n"
@@ -19,7 +23,7 @@ inp_x:		.quad 1
 .section .text
 .global _start
 _start:
-	/* condition input */
+	/* parse condition */
 
 	# print the condition prompt
 	mov $cond_prompt, %rsi
@@ -95,7 +99,17 @@ _start:
 	jmp _start
 .u64_cond_success:
 
-	mov %rax, %r14
+	mov %rax, %r14		# save the condition operand
+
+	mov $prefix_then, %rsi
+	call print
+	mov $'\n', %rax
+	call putchar
+
+	mov $prefix_else, %rsi
+	call print
+	mov $'\n', %rax
+	call putchar
 
 	/* value input */
 
@@ -137,7 +151,7 @@ _start:
 	# jl .l16
 
 .imeets:			# input meets the condition
-	pushq $expr_ge16	# use a register?
+	pushq $expr_meets	# use a register?
 
 	sub $11, %rax		# t = x - 11
 	mul %rax		# t = t^2
@@ -146,7 +160,7 @@ _start:
 	jmp .done
 
 .ielse:
-	pushq $expr_l16		# use a register?
+	pushq $expr_else	# use a register?
 
 	mov %rax, %rcx		# tmp %rcx = x
 
@@ -167,6 +181,10 @@ _start:
 
 	# print the expression
 	popq %rsi		# use a register?
+	call print
+
+	# print " = "
+	mov $result_sep, %rsi
 	call print
 
 	# print the result
@@ -198,7 +216,7 @@ panic:
 	syscall
 
 /*
- * skip_ws() - Skip space characters in a string
+ * skip_ws() - skip space characters in a string
  *
  * Args: %rsi - string pointer
  *
@@ -210,6 +228,15 @@ skip_ws:
 	cmpb $' ', (%rsi)
 	je .ws_next
 	ret
+
+/*
+ * readline() - 
+ *
+ * Args: %rsi - string pointer
+ *
+ * Returns: %rsi - first non-space character's address
+ */
+readline:
 
 /*
  * fj* - check if the arguments meet a condition (a <=> b).
