@@ -9,8 +9,8 @@ release: expr
 debug: CFLAGS += -gdwarf-2
 debug: expr
 
-expr: expr.o fprint.o putchar.o stoi64.o u64tos.o
-	$(LD) expr.o fprint.o putchar.o stoi64.o u64tos.o -o expr
+expr: expr.o fprint.o putchar.o readline.o stoi64.o u64tos.o
+	$(LD) expr.o fprint.o putchar.o readline.o stoi64.o u64tos.o -o expr
 
 expr.o: expr.S
 	$(CC) $(CFLAGS) expr.S -o expr.o
@@ -20,6 +20,9 @@ fprint.o: fprint.S
 
 putchar.o: putchar.S
 	$(CC) $(CFLAGS) putchar.S -o putchar.o
+
+readline.o: readline.S
+	$(CC) $(CFLAGS) readline.S -o readline.o
 
 stoi64.o: stoi64.S
 	$(CC) $(CFLAGS) stoi64.S -o stoi64.o
