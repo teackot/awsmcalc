@@ -11,7 +11,7 @@
  */
 .global readline
 readline:
-	xor %rax, %rax		# read
+	xor %rax, %rax		# sys_read
 	xor %rdi, %rdi		# from stdin
 	dec %rdx		# at most %rdx - 1 chars (1b reserved tor \0)
 	syscall
@@ -23,5 +23,5 @@ readline:
 	xor %rbx, %rbx		# success
 	ret
 .read_err:
-	mov $-1, %rbx		# default error code
+	mov $-1, %rbx
 	ret

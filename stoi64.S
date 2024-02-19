@@ -37,7 +37,7 @@ stoi64:
 	xor %rbx, %rbx		# error code 0
 	test %r8, %r8
 	jnz .sign		# string wasn't empty
-	not %rbx		# error code -1
+	not %rbx		# error code -1 - empty string
 .sign:
 	test %r9, %r9
 	jz .end

@@ -13,6 +13,8 @@ result_sep:	.string " = "
 err_read:	.string "Could not read the input!\n"
 err_nan:	.string "You should enter an integer!\n"
 
+cmd_quit:	.string "quit"
+
 .section .data
 
 buf:		.fill 64
@@ -133,8 +135,20 @@ _start:
 
 	test %rbx, %rbx		# check for stoi64 errors
 	jz 1f
+	cmp $-2, %rbx		# NaN
+	je .cmd
 	mov $err_nan, %rsi
 	call print
+	jmp _start
+.cmd:
+	movw (buf), %bx
+	cmp $'q', %bx
+	je .exit
+	mov $buf, %rsi
+	mov $cmd_quit, %rdi
+	call strcmp
+	test %rsi, %rsi
+	jz .exit
 	jmp _start
 1:
 
@@ -189,6 +203,7 @@ _start:
 
 	jmp .read_x
 
+.exit:
 	/* sys_exit */
 	mov $60, %rax
 	xor %rdi, %rdi
