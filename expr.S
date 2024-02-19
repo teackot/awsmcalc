@@ -7,7 +7,7 @@ expr_ge16:	.string "(x - 11)^2 + 125 = "
 expr_l16:	.string "x^2 + 72x + 6400 = "
 
 err_read:	.string "Could not read the input!\n"
-err_nan:	.string "You should enter a non-negative integer!\n"
+err_nan:	.string "You should enter an integer!\n"
 
 .section .data
 
@@ -51,28 +51,28 @@ _start:
 	je .inx
 	jmp _start
 .ilx:
-	cmp $'=', %ah		# <=
-	je .ile
 	cmp $0, %ah		# <
 	je .il
+	cmp $'=', %ah		# <=
+	je .ile
 	jmp _start
-	.ile:
-		mov $fjle, %r15
-		jmp .cond_set
 	.il:
 		mov $fjl, %r15
 		jmp .cond_set
+	.ile:
+		mov $fjle, %r15
+		jmp .cond_set
 .igx:
-	cmp $'=', %ah		# >=
-	je .ige
 	cmp $0, %ah		# >
 	je .ig
+	cmp $'=', %ah		# >=
+	je .ige
 	jmp _start
-	.ige:
-		mov $fjge, %r15
-		jmp .cond_set
 	.ig:
 		mov $fjg, %r15
+		jmp .cond_set
+	.ige:
+		mov $fjge, %r15
 		jmp .cond_set
 .iex:
 	cmp $'=', %ah		# ==
@@ -85,6 +85,21 @@ _start:
 	mov $fjne, %r15
 	jmp .cond_set
 .cond_set:
+
+	mov $buf + 2, %rsi
+	call skip_ws
+
+	mov $10, %rbx
+	call stoi64
+
+	test %rbx, %rbx		# check for stoi64 errors
+	jz .u64_cond_success
+	mov $err_nan, %rsi
+	call print
+	jmp _start
+.u64_cond_success:
+
+	mov %rax, %r14
 
 	/* value input */
 
@@ -111,14 +126,14 @@ _start:
 	mov $10, %rbx		# base 10
 	call stoi64		# to u64
 
-	test %rbx, %rbx		# check for stou64 errors
+	test %rbx, %rbx		# check for stoi64 errors
 	jz .u64_success
 	mov $err_nan, %rsi
 	call print
 	jmp _start
 .u64_success:
 
-	mov $16, %rbx
+	mov %r14, %rbx
 	mov $.imeets, %rcx
 	call *%r15
 	jmp .ielse
@@ -185,6 +200,20 @@ panic:
 	mov $60, %rax
 	mov $-1, %rdi
 	syscall
+
+/*
+ * skip_ws() - Skip space characters in a string
+ *
+ * Args: %rsi - string pointer
+ *
+ * Returns: %rsi - first non-space character's address
+ */
+.ws_next:
+	inc %rsi
+skip_ws:
+	cmpb $' ', (%rsi)
+	je .ws_next
+	ret
 
 /*
  * fj* - check if the arguments meet a condition (a <=> b).
