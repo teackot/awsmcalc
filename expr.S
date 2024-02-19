@@ -29,17 +29,14 @@ _start:
 	mov $cond_prompt, %rsi
 	call print
 
-	xor %rax, %rax		# read
-	xor %rdi, %rdi		# from stdin
-	mov $buf, %rsi		# into buf
-	mov $buf_len-1, %rdx	# at most buf_len chars (1b reserved tor \0)
-	syscall
+	# read the full condition
+	mov $buf, %rsi
+	mov $buf_len, %rdx
+	call readline
 
-	add $buf-1, %rax	# point at \n (buf[rax-1])
-	cmpb $'\n', (%rax)
-	je .cond_read_success
-	mov $err_read, %rsi	# | no \n, panic with a read error
-	jmp panic		# |
+	jz .cond_read_success
+	mov $err_read, %rsi	# read error, panic
+	call panic
 .cond_read_success:
 
 	movb $0, (%rax)		# trim newline
@@ -117,20 +114,14 @@ _start:
 	mov $prompt, %rsi
 	call print
 
-	xor %rax, %rax		# read
-	xor %rdi, %rdi		# from stdin
-	mov $buf, %rsi		# into buf
-	mov $buf_len-1, %rdx	# at most buf_len chars (1b reserved tor \0)
-	syscall
+	mov $buf, %rsi
+	mov $buf_len, %rdx
+	call readline
 
-	add $buf-1, %rax	# point at \n (buf[rax-1])
-	cmpb $'\n', (%rax)
-	je .x_read_success
-	mov $err_read, %rsi	# | no \n, panic with a read error
-	jmp panic		# |
+	jz .x_read_success
+	mov $err_read, %rsi	# read error, panic
+	call panic
 .x_read_success:
-
-	movb $0, (%rax)		# trim newline
 
 	mov $buf, %rsi		# convert buf
 	mov $10, %rbx		# base 10
@@ -230,13 +221,31 @@ skip_ws:
 	ret
 
 /*
- * readline() - 
+ * readline() - read a full line from stdin into a null-terminated string,
+ *              trimming the '\n' character
  *
- * Args: %rsi - string pointer
+ * Args: %rsi - buffer address
+ *       %rdx - buffer size
  *
- * Returns: %rsi - first non-space character's address
+ * Returns: %rax - pointer to the null terminator
+ *          %rbx - error code
+ *          SF, !ZF - presence of an error
  */
 readline:
+	xor %rax, %rax		# read
+	xor %rdi, %rdi		# from stdin
+	dec %rdx		# at most %rdx - 1 chars (1b reserved tor \0)
+	syscall
+
+	lea -1(%rax, %rsi), %rax # point at \n (buf[rax-1])
+	cmpb $'\n', (%rax)
+	jne .read_err
+	movb $0, (%rax)		# trim newline
+	xor %rbx, %rbx		# success
+	ret
+.read_err:
+	mov $-1, %rbx		# default error code
+	ret
 
 /*
  * fj* - check if the arguments meet a condition (a <=> b).
