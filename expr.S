@@ -39,8 +39,6 @@ _start:
 	call panic
 .cond_read_success:
 
-	movb $0, (%rax)		# trim newline
-
 	mov $buf + 2, %rsi
 	movw -2(%rsi), %ax
 	cmp $'<', %al		# <x
