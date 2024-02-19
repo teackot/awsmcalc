@@ -23,7 +23,7 @@ inp_x:		.quad 1
 .section .text
 .global _start
 _start:
-	/* parse condition */
+	/* parse the condition */
 
 	# print the condition prompt
 	mov $cond_prompt, %rsi
@@ -34,11 +34,12 @@ _start:
 	mov $buf_len, %rdx
 	call readline
 
-	jz .cond_read_success
+	jz 1f			# success
 	mov $err_read, %rsi	# read error, panic
 	call panic
-.cond_read_success:
+1:
 
+	/* parse the operator, set %r15 to the corresponding function */
 	mov $buf + 2, %rsi
 	movw -2(%rsi), %ax
 	cmp $'<', %al		# <x
@@ -82,32 +83,37 @@ _start:
 	jmp .cond_set
 .cond_set:
 
+	# %rsi is already set to the next char after the operator
 	call skip_ws
 
+	# parse the operand
 	mov $10, %rbx
 	call stoi64
 
 	test %rbx, %rbx		# check for stoi64 errors
-	jz .u64_cond_success
+	jz 1f			# success
 	mov $err_nan, %rsi
 	call print
 	jmp _start
-.u64_cond_success:
+1:
 
 	mov %rax, %r14		# save the condition operand
 
+	# print the 'then' branch expression
 	mov $prefix_then, %rsi
 	call print
 	mov $'\n', %rax
 	call putchar
 
+	# print the 'else' branch expression
 	mov $prefix_else, %rsi
 	call print
 	mov $'\n', %rax
 	call putchar
 
-	/* value input */
+	/* read the value */
 
+.read_x:
 	# print the prompt
 	mov $prompt, %rsi
 	call print
@@ -116,30 +122,28 @@ _start:
 	mov $buf_len, %rdx
 	call readline
 
-	jz .x_read_success
+	jz 1f			# success
 	mov $err_read, %rsi	# read error, panic
 	call panic
-.x_read_success:
+1:
 
 	mov $buf, %rsi		# convert buf
 	mov $10, %rbx		# base 10
 	call stoi64		# to u64
 
 	test %rbx, %rbx		# check for stoi64 errors
-	jz .u64_success
+	jz 1f
 	mov $err_nan, %rsi
 	call print
 	jmp _start
-.u64_success:
+1:
 
-	mov %r14, %rbx
-	mov $.imeets, %rcx
-	call *%r15
-	jmp .ielse
-	# cmp $16, %rax
-	# jl .l16
+	mov %r14, %rbx		# the const operand
+	mov $.meets, %rcx	# jmp to .meets
+	call *%r15		# call the comparison function
+	jmp .else
 
-.imeets:			# input meets the condition
+.meets:				# input meets the condition
 	pushq $expr_meets	# use a register?
 
 	sub $11, %rax		# t = x - 11
@@ -148,7 +152,7 @@ _start:
 
 	jmp .done
 
-.ielse:
+.else:
 	pushq $expr_else	# use a register?
 
 	mov %rax, %rcx		# tmp %rcx = x
@@ -182,6 +186,8 @@ _start:
 
 	mov $'\n', %rax
 	call putchar
+
+	jmp .read_x
 
 	/* sys_exit */
 	mov $60, %rax
