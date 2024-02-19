@@ -219,39 +219,3 @@ skip_ws:
 	cmpb $' ', (%rsi)
 	je .ws_next
 	ret
-
-/*
- * fj* - check if the arguments meet a condition (a <=> b).
- *       Basically a conditional jump as a function.
- *
- * Args: %rax - a
- *       %rbx - b
- *       %rcx - jmp address on success
- */
-fjge:
-	cmp %rbx, %rax
-	jge .meets
-	ret
-fjg:
-	cmp %rbx, %rax
-	jg .meets
-	ret
-fje:
-	cmp %rbx, %rax
-	je .meets
-	ret
-fjne:
-	cmp %rbx, %rax
-	jne .meets
-	ret
-fjl:
-	cmp %rbx, %rax
-	jl .meets
-	ret
-fjle:
-	cmp %rbx, %rax
-	jle .meets
-	ret
-.meets:
-	sub $8, %rsp		# forget the return address
-	jmp *%rcx
