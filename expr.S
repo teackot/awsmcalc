@@ -40,7 +40,8 @@ _start:
 
 	movb $0, (%rax)		# trim newline
 
-	movw (buf), %ax
+	mov $buf + 2, %rsi
+	movw -2(%rsi), %ax
 	cmp $'<', %al		# <x
 	je .ilx
 	cmp $'=', %al		# =x
@@ -51,11 +52,9 @@ _start:
 	je .inx
 	jmp _start
 .ilx:
-	cmp $0, %ah		# <
-	je .il
 	cmp $'=', %ah		# <=
 	je .ile
-	jmp _start
+	dec %rsi
 	.il:
 		mov $fjl, %r15
 		jmp .cond_set
@@ -63,11 +62,9 @@ _start:
 		mov $fjle, %r15
 		jmp .cond_set
 .igx:
-	cmp $0, %ah		# >
-	je .ig
 	cmp $'=', %ah		# >=
 	je .ige
-	jmp _start
+	dec %rsi
 	.ig:
 		mov $fjg, %r15
 		jmp .cond_set
@@ -86,7 +83,6 @@ _start:
 	jmp .cond_set
 .cond_set:
 
-	mov $buf + 2, %rsi
 	call skip_ws
 
 	mov $10, %rbx
