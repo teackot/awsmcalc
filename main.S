@@ -15,7 +15,7 @@ err_nan:	.string "You should enter an integer!\n"
 
 cmd_quit:	.string "quit"
 
-tok_test_str:	.string "1 + 2 * (3 - 4)^5"
+tok_test_str:	.string "1 + 2 * 3^4 - 5"
 
 .section .data
 
@@ -30,6 +30,20 @@ buf_len = .-buf
 .section .text
 .global _start
 _start:
+	mov $tok_test_str, %rsi
+	mov $tokens_then, %rdi
+	call tokenize
+
+	mov $tokens_then, %rsi
+	call transform_postfix
+
+	mov $tokens_then, %rsi
+	mov $9*2, %rcx
+1:
+	mov (%rsi), %rax
+	add $8, %rsi
+	loop 1b
+
 	/* parse the condition */
 
 	# print the condition prompt

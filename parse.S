@@ -1,7 +1,7 @@
 /*
  * struct token:
  *   - value: i64
- *   - op: u64 (padded char)
+ *   - op: u64 (padded char), -1 - end
  */
 token_value_size = 8
 token_op_size = 8
@@ -58,6 +58,9 @@ tokenize:
 	jmp tokenize
 
 .tok_done:
+	movq $-1, (%rdi)
+	movq $0, token_op_size(%rdi)
+	add $token_size, %rdi
 	ret
 
 /*
@@ -68,11 +71,12 @@ tokenize:
  *                         , else
  *                           : if [n + 1] == 0 then ([n], [n + 1]) == 0
  *                           , if [n + 1] in {+, -, *, /, ^} then ([n], [n + 1]) - operator
+ *                           , if [n + 1] == -1 then end of array
  *                           , else - error
  *
  * Args: %rsi - tokens[]
  */
-.global sort_postfix
+.global transform_postfix
 transform_postfix:
 	# set the stack frame
 	push %rbp
@@ -90,49 +94,90 @@ transform_postfix:
 	movq %rax, (%rdi)
 	add $8, %rdi
 	add $token_size, %rsi
+	test %rax, %rax
+	jnz 1b
+	movq $0, (%rdi)
+	add $8, %rdi
 	jmp 1b
 .op:
+	cmp $-1, %rax
+	je .post_done
+
+	add $token_size, %rsi
+
 	/* first op is always pushed */
 	cmp %rsp, %rbp
 	je .push_op
-	/* +, - are simply pushed */
-	cmp $'+', %rax
-	je .push_op
-	cmp $'-', %rax
-	je .push_op
-	/* *, / pop the stack if they have a higher precedence */
+
+	/* pops if prev is also ^ */
+	cmp $'^', %rax
+	je .precedence_pow
+	/* pops *, / and ^ */
 	cmp $'*', %rax
 	je .precedence_mul
 	cmp $'/', %rax
 	je .precedence_mul
-	/* same for ^ */
-	cmp $'^', %rax
-	je .precedence_pow
+	/* pops all non-parentheses */
+	cmp $'+', %rax
+	je .precedence_add
+	cmp $'-', %rax
+	je .precedence_add
 	# TODO: parentheses
-.precedence_mul:
-	mov (%esp), %rbx
-	cmp $'-', %rbx
-	jne .push_op
-	cmp $'+', %rbx
-	jne .push_op
-	add $8, %esp		# pop the op
-	movq %rbx, (%rdi)
-	add $8, %rdi
-	cmp %rsp, %rbp
-	je .push_op
-	jmp .precedence_mul
+	hlt			# unreachable
+
 .precedence_pow:
-	mov (%esp), %rbx
-	cmp $'^', %rbx
-	je .push_op
-	add $8, %esp		# pop the op
-	movq %rbx, (%rdi)
-	add $8, %rdi
 	cmp %rsp, %rbp
 	je .push_op
+	mov (%rsp), %rbx
+	cmp $'^', %rbx
+	jne .push_op
+	add $8, %rsp		# pop the op
+	movq $0, (%rdi)
+	movq %rbx, 8(%rdi)
+	add $16, %rdi
 	jmp .precedence_pow
+
+.precedence_mul:
+	cmp %rsp, %rbp
+	je .push_op
+	mov (%rsp), %rbx
+	cmp $'+', %rbx
+	je .push_op
+	cmp $'-', %rbx
+	je .push_op
+	add $8, %rsp		# pop the op
+	movq $0, (%rdi)
+	movq %rbx, 8(%rdi)
+	add $16, %rdi
+	jmp .precedence_mul
+
+.precedence_add:
+	cmp %rsp, %rbp
+	je .push_op
+	mov (%rsp), %rbx
+	add $8, %rsp		# pop the op
+	movq $0, (%rdi)
+	movq %rbx, 8(%rdi)
+	add $16, %rdi
+	jmp .precedence_add
+
 .push_op:
 	push %rax
+	jmp 1b
 
+.post_done:
+	# pop the rest of the stack
+2:
+	cmp %rsp, %rbp
+	je 2f
+	pop %rbx
+	movq $0, (%rdi)
+	movq %rbx, 8(%rdi)
+	add $16, %rdi
+	jmp 2b
+2:
+
+	movq $-1, (%rdi)
+	add $8, %rdi
 	leave
 	ret
