@@ -78,7 +78,7 @@ tokenize:
  */
 .global transform_postfix
 transform_postfix:
-	# set the stack frame
+	# setup the stack frame
 	push %rbp
 	mov %rsp, %rbp
 
@@ -123,7 +123,7 @@ transform_postfix:
 	cmp $'-', %rax
 	je .precedence_add
 	# TODO: parentheses
-	hlt			# unreachable
+	hlt			# should be unreachable
 
 .precedence_pow:
 	cmp %rsp, %rbp
@@ -177,7 +177,98 @@ transform_postfix:
 	jmp 2b
 2:
 
-	movq $-1, (%rdi)
-	add $8, %rdi
+	movq $0, (%rdi)
+	movq $-1, 8(%rdi)
+	add $16, %rdi
 	leave
+	ret
+
+/*
+ * exec_postfix() - execute a postfix expression
+ *
+ * Args: %rsi - postfix expression
+ *
+ * Returns: %rax - result
+ */
+.global exec_postfix
+exec_postfix:
+	# setup the stack frame
+	push %rbp
+	mov %rsp, %rbp
+
+.exec_next:
+	mov (%rsi), %rbx
+	add $8, %rsi
+	test %rbx, %rbx
+	jz .complex
+	push %rbx
+	jmp .exec_next
+.complex:
+	mov (%rsi), %rbx
+	add $8, %rsi
+	test %rbx, %rbx
+	jnz .exec_op
+	push %rbx
+	jmp .exec_next
+.exec_op:
+	cmp $-1, %rbx
+	je .exec_exit
+	pop %rcx		# | operands
+	pop %rax		# |
+	cmp $'+', %rbx
+	jne 2f
+	add %rcx, %rax
+	push %rax
+	jmp .exec_next
+2:
+	cmp $'-', %rbx
+	jne 2f
+	sub %rcx, %rax
+	push %rax
+	jmp .exec_next
+2:
+	cmp $'*', %rbx
+	jne 2f
+	imul %rcx
+	push %rax
+	jmp .exec_next
+# 2:
+# 	cmp $'/', %rbx
+# 	jne 2f
+# 	imul %rcx
+# 	push %rax
+# 	jmp .exec_next
+2:
+	cmp $'^', %rbx
+	jne 2f
+	call pow
+	push %rax
+	jmp .exec_next
+2:
+
+.exec_exit:
+	cmp %rsp, %rbp
+	je 1f
+	pop %rax
+	leave
+	ret
+1:
+	hlt
+
+/* VERY BAD!!! AWFUL CODE!!!
+ * pow() - raise a to the power of b (a^b)
+ *
+ * Args: %rax - a
+ *       %rcx - b
+ *
+ * Uses: %rbx
+ *
+ * Returns: %rax - a^b
+ */
+pow:
+	dec %rcx
+	mov %rax, %rbx
+1:
+	imul %rbx
+	loop 1b
 	ret

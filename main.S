@@ -38,11 +38,8 @@ _start:
 	call transform_postfix
 
 	mov $tokens_then, %rsi
-	mov $9*2, %rcx
-1:
-	mov (%rsi), %rax
-	add $8, %rsi
-	loop 1b
+	call exec_postfix
+	nop
 
 	/* parse the condition */
 
