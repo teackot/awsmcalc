@@ -15,7 +15,7 @@ err_nan:	.string "You should enter an integer!\n"
 
 cmd_quit:	.string "quit"
 
-tok_test_str:	.string "1 + 2 * 3^4 - 5"
+tok_test_str:	.string "1 + 2 * x^4 - 5"
 
 .section .data
 
@@ -38,6 +38,7 @@ _start:
 	call transform_postfix
 
 	mov $tokens_then, %rsi
+	mov $3, %rdi		# x = 3
 	call exec_postfix
 	nop
 

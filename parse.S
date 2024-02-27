@@ -37,6 +37,8 @@ tokenize:
 	je .tok_op
 	cmp $')', %bl
 	je .tok_op
+	cmp $'x', %bl
+	je .tok_op
 	jmp .tok_int
 
 .tok_op:
@@ -100,10 +102,18 @@ transform_postfix:
 	add $8, %rdi
 	jmp 1b
 .op:
+	add $token_size, %rsi
+
 	cmp $-1, %rax
 	je .post_done
 
-	add $token_size, %rsi
+	cmp $'x', %rax
+	jne .not_x
+	movq $0, (%rdi)
+	movq $'x', 8(%rdi)
+	add $16, %rdi
+	jmp 1b
+.not_x:
 
 	/* first op is always pushed */
 	cmp %rsp, %rbp
@@ -187,6 +197,7 @@ transform_postfix:
  * exec_postfix() - execute a postfix expression
  *
  * Args: %rsi - postfix expression
+ *       %rdi - x
  *
  * Returns: %rax - result
  */
@@ -207,8 +218,13 @@ exec_postfix:
 	mov (%rsi), %rbx
 	add $8, %rsi
 	test %rbx, %rbx
-	jnz .exec_op
+	jnz .check_x
 	push %rbx
+	jmp .exec_next
+.check_x:
+	cmp $'x', %rbx
+	jne .exec_op
+	push %rdi
 	jmp .exec_next
 .exec_op:
 	cmp $-1, %rbx
