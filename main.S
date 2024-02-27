@@ -15,12 +15,17 @@ err_nan:	.string "You should enter an integer!\n"
 
 cmd_quit:	.string "quit"
 
+tok_test_str:	.string "1 + 2 * (3 - 4)^5"
+
 .section .data
 
 buf:		.fill 64
 buf_len = .-buf
 
-inp_x:		.quad 1
+.section .bss
+
+.lcomm inp_x, 1 * 8
+.lcomm tokens_then, 64 * 16 # token_size = 16
 
 .section .text
 .global _start
@@ -224,17 +229,3 @@ panic:
 	mov $60, %rax
 	mov $-1, %rdi
 	syscall
-
-/*
- * skip_ws() - skip space characters in a string
- *
- * Args: %rsi - string pointer
- *
- * Returns: %rsi - first non-space character's address
- */
-.ws_next:
-	inc %rsi
-skip_ws:
-	cmpb $' ', (%rsi)
-	je .ws_next
-	ret

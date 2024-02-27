@@ -9,11 +9,11 @@ release: expr
 debug: CFLAGS += -gdwarf-2
 debug: expr
 
-expr: expr.o fprint.o putchar.o readline.o stoi64.o u64tos.o fj.o strcmp.o
-	$(LD) expr.o fprint.o putchar.o readline.o stoi64.o u64tos.o fj.o strcmp.o -o expr
+expr: main.o fprint.o putchar.o readline.o stoi64.o u64tos.o fj.o strcmp.o skip_ws.o parse.o
+	$(LD) main.o fprint.o putchar.o readline.o stoi64.o u64tos.o fj.o strcmp.o skip_ws.o parse.o -o expr
 
-expr.o: expr.S
-	$(CC) $(CFLAGS) expr.S -o expr.o
+main.o: main.S
+	$(CC) $(CFLAGS) main.S -o main.o
 
 fprint.o: fprint.S
 	$(CC) $(CFLAGS) fprint.S -o fprint.o
@@ -35,6 +35,12 @@ fj.o: fj.S
 
 strcmp.o: strcmp.S
 	$(CC) $(CFLAGS) strcmp.S -o strcmp.o
+
+skip_ws.o: skip_ws.S
+	$(CC) $(CFLAGS) skip_ws.S -o skip_ws.o
+
+parse.o: parse.S
+	$(CC) $(CFLAGS) parse.S -o parse.o
 
 clean:
 	rm *.o

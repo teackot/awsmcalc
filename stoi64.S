@@ -1,12 +1,13 @@
 /*
- * stoi64() - converts a null-terminated string to
- *            a signed integer
+ * sntoi64() - converts a null-terminated string to a signed integer
  *
  * Args: %rsi - string
- *       %rbx - radix
+ *       %rbx - radix ( only <= 10 is supported =( )
+ *       %r10 - treat non-numeric chars as terminators
  *
  * Returns: %rax - resulting number
  *          %rbx - error code
+ *          %r8  - numeric string length
  */
 .global stoi64
 stoi64:
@@ -19,8 +20,10 @@ stoi64:
 	test %cl, %cl
 	jz .done
 	sub $'0', %cl		# convert a digit
-	cmp $9, %cx		# cx to ignore the SF
-	jle .numeric
+	cmp %rbx, %rcx		# cx to ignore the SF
+	jbe .numeric
+	test %r10, %r10		# treat as terminator
+	je .done
 	not %r9			# switch negative flag
 	cmp $'-'-'0', %cl	# negative
 	je .next
