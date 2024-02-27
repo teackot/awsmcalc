@@ -23,7 +23,7 @@ stoi64:
 	cmp %rbx, %rcx		# cx to ignore the SF
 	jbe .numeric
 	test %r10, %r10		# treat as terminator
-	je .done
+	jnz .done
 	not %r9			# switch negative flag
 	cmp $'-'-'0', %cl	# negative
 	je .next

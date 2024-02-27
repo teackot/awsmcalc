@@ -4,10 +4,10 @@ cond_prompt:	.string "if x "
 
 prompt:		.string "x = "
 
-prefix_then:	.ascii  "then: "
-expr_meets:	.string "(x - 11)^2 + 125"
-prefix_else:	.ascii  "else: "
-expr_else:	.string "x^2 + 72x + 6400"
+then_prompt:	.string  "then: "
+# expr_meets:	.string "(x - 11)^2 + 125"
+else_prompt:	.string  "else: "
+# expr_else:	.string "x^2 + 72x + 6400"
 result_sep:	.string " = "
 
 err_read:	.string "Could not read the input!\n"
@@ -19,29 +19,20 @@ tok_test_str:	.string "(1 + 2) * x^4 - 5"
 
 .section .data
 
-buf:		.fill 64
-buf_len = .-buf
+buf_len = 64			# universal buf len
+buf:		.fill buf_len
+expr_then_buf:	.fill buf_len
+expr_else_buf:	.fill buf_len
 
 .section .bss
 
-.lcomm inp_x, 1 * 8
-.lcomm tokens_then, 64 * 16 # token_size = 16
+.lcomm inp_x,		1 * 8
+.lcomm expr_then,	64 * 16 # token_size = 16
+.lcomm expr_else,	64 * 16 # token_size = 16
 
 .section .text
 .global _start
 _start:
-	mov $tok_test_str, %rsi
-	mov $tokens_then, %rdi
-	call tokenize
-
-	mov $tokens_then, %rsi
-	call transform_postfix
-
-	mov $tokens_then, %rsi
-	mov $3, %rdi		# x = 3
-	call exec_postfix
-	nop
-
 	/* parse the condition */
 
 	# print the condition prompt
@@ -107,6 +98,7 @@ _start:
 
 	# parse the operand
 	mov $10, %rbx
+	xor %r10, %r10
 	call stoi64
 
 	test %rbx, %rbx		# check for stoi64 errors
@@ -118,17 +110,63 @@ _start:
 
 	mov %rax, %r14		# save the condition operand
 
-	# print the 'then' branch expression
-	mov $prefix_then, %rsi
-	call print
-	mov $'\n', %rax
-	call putchar
+	/*
+	 * Parse expressions
+	 */
 
-	# print the 'else' branch expression
-	mov $prefix_else, %rsi
+	/* parse the "then" expression */
+
+	# print the "then" prompt
+	mov $then_prompt, %rsi
 	call print
-	mov $'\n', %rax
-	call putchar
+
+	# read the expression
+	mov $expr_then_buf, %rsi
+	mov $buf_len, %rdx
+	call readline
+
+	jz 1f			# success
+	mov $err_read, %rsi	# read error, panic
+	call panic
+1:
+
+	# tokenize the expression
+	mov $expr_then_buf, %rsi
+	mov $expr_then, %rdi
+	call tokenize
+
+	# transform to a postfix form
+	mov $expr_then, %rsi
+	call transform_postfix
+
+	/* parse the "else" expression */
+
+	# print the "else" prompt
+	mov $else_prompt, %rsi
+	call print
+
+	# read the expression
+	mov $expr_else_buf, %rsi
+	mov $buf_len, %rdx
+	call readline
+
+	jz 1f			# success
+	mov $err_read, %rsi	# read error, panic
+	call panic
+1:
+
+	# tokenize the expression
+	mov $expr_else_buf, %rsi
+	mov $expr_else, %rdi
+	call tokenize
+
+	# transform to a postfix form
+	mov $expr_else, %rsi
+	call transform_postfix
+
+	/*
+	 * Expressions parsed.
+	 */
 
 	/* read the value */
 
@@ -148,6 +186,7 @@ _start:
 
 	mov $buf, %rsi		# convert buf
 	mov $10, %rbx		# base 10
+	xor %r10, %r10		# error on non-numeric
 	call stoi64		# to u64
 
 	test %rbx, %rbx		# check for stoi64 errors
@@ -175,28 +214,20 @@ _start:
 	jmp .else
 
 .meets:				# input meets the condition
-	pushq $expr_meets	# use a register?
+	pushq $expr_then_buf	# use a register?
 
-	sub $11, %rax		# t = x - 11
-	mul %rax		# t = t^2
-	add $125, %rax		# t += 125
+	mov $expr_then, %rsi
+	mov %rax, %rdi
+	call exec_postfix
 
 	jmp .done
 
 .else:
-	pushq $expr_else	# use a register?
+	pushq $expr_else_buf	# use a register?
 
-	mov %rax, %rcx		# tmp %rcx = x
-
-	mul %rax		# x^2
-	mov %rax, %rbx		# %rbx = x^2
-
-	mov %rcx, %rax		# | %rax = 72x
-	mov $72, %rcx		# |
-	mul %rcx		# |
-
-	add %rbx, %rax		# %rbx + %rax = x^2 + 72x
-	add $6400, %rax		# + 6400
+	mov $expr_else, %rsi
+	mov %rax, %rdi
+	call exec_postfix
 
 .done:
 	mov $10, %rbx		# base 10
