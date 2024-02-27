@@ -88,7 +88,7 @@ transform_postfix:
 	# %rdi points to the end of the resulting array
 	mov %rsi, %rdi
 
-1:
+.next_token:
 	movq (%rsi), %rax
 	test %rax, %rax
 	jnz .op
@@ -97,10 +97,10 @@ transform_postfix:
 	add $8, %rdi
 	add $token_size, %rsi
 	test %rax, %rax
-	jnz 1b
+	jnz .next_token
 	movq $0, (%rdi)
 	add $8, %rdi
-	jmp 1b
+	jmp .next_token
 .op:
 	add $token_size, %rsi
 
@@ -112,7 +112,7 @@ transform_postfix:
 	movq $0, (%rdi)
 	movq $'x', 8(%rdi)
 	add $16, %rdi
-	jmp 1b
+	jmp .next_token
 .not_x:
 
 	/* first op is always pushed */
@@ -132,8 +132,22 @@ transform_postfix:
 	je .precedence_add
 	cmp $'-', %rax
 	je .precedence_add
-	# TODO: parentheses
-	hlt			# should be unreachable
+	/* () */
+	cmp $'(', %rax
+	je .push_op
+	cmp $')', %rax
+	jne 2f
+	# pop until '('
+1:
+	pop %rbx
+	cmp $'(', %rbx
+	je .next_token
+	movq $0, (%rdi)
+	movq %rbx, 8(%rdi)
+	add $16, %rdi
+	jmp 1b
+2:
+	hlt			# should not be reachable
 
 .precedence_pow:
 	cmp %rsp, %rbp
@@ -155,6 +169,10 @@ transform_postfix:
 	je .push_op
 	cmp $'-', %rbx
 	je .push_op
+	cmp $'(', %rbx
+	je .push_op
+	cmp $')', %rbx
+	je .push_op
 	add $8, %rsp		# pop the op
 	movq $0, (%rdi)
 	movq %rbx, 8(%rdi)
@@ -165,6 +183,11 @@ transform_postfix:
 	cmp %rsp, %rbp
 	je .push_op
 	mov (%rsp), %rbx
+	cmp $'(', %rbx
+	je .push_op
+	cmp $')', %rbx
+	je .push_op
+	mov (%rsp), %rbx
 	add $8, %rsp		# pop the op
 	movq $0, (%rdi)
 	movq %rbx, 8(%rdi)
@@ -173,7 +196,7 @@ transform_postfix:
 
 .push_op:
 	push %rax
-	jmp 1b
+	jmp .next_token
 
 .post_done:
 	# pop the rest of the stack

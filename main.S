@@ -15,7 +15,7 @@ err_nan:	.string "You should enter an integer!\n"
 
 cmd_quit:	.string "quit"
 
-tok_test_str:	.string "1 + 2 * x^4 - 5"
+tok_test_str:	.string "(1 + 2) * x^4 - 5"
 
 .section .data
 
