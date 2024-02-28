@@ -1,21 +1,21 @@
 .section .rodata
 
-cond_prompt:	.string "if x "
+# Original task:
+# if x >= 16
+# then: (x - 11)^2 + 125
+# else: x^2 + 72*x + 6400
 
+cond_prompt:	.string "if x "
+then_prompt:	.string "then: "
+else_prompt:	.string "else: "
 prompt:		.string "x = "
 
-then_prompt:	.string  "then: "
-# expr_meets:	.string "(x - 11)^2 + 125"
-else_prompt:	.string  "else: "
-# expr_else:	.string "x^2 + 72x + 6400"
 result_sep:	.string " = "
 
 err_read:	.string "Could not read the input!\n"
 err_nan:	.string "You should enter an integer!\n"
 
 cmd_quit:	.string "quit"
-
-tok_test_str:	.string "(1 + 2) * x^4 - 5"
 
 .section .data
 
@@ -26,9 +26,8 @@ expr_else_buf:	.fill buf_len
 
 .section .bss
 
-.lcomm inp_x,		1 * 8
-.lcomm expr_then,	64 * 16 # token_size = 16
-.lcomm expr_else,	64 * 16 # token_size = 16
+.lcomm expr_then, 64 * 16 # token_size = 16
+.lcomm expr_else, 64 * 16 # token_size = 16
 
 .section .text
 .global _start
@@ -189,32 +188,36 @@ _start:
 	xor %r10, %r10		# error on non-numeric
 	call stoi64		# to u64
 
+	/* handle errors and commands */
 	test %rbx, %rbx		# check for stoi64 errors
 	jz 1f
-	cmp $-2, %rbx		# NaN
+	cmp $-2, %rbx		# NaN, check if it's a command
 	je .cmd
 	mov $err_nan, %rsi
 	call print
 	jmp _start
 .cmd:
-	movw (buf), %bx
-	cmp $'q', %bx
+	movw (buf), %bx		# fetch 2 bytes of a string in reversed order
+	cmp $'q', %bx		# "q" - short for quit (\0 in the higher half)
 	je .exit
-	mov $buf, %rsi
-	mov $cmd_quit, %rdi
+	mov $buf, %rsi		# |
+	mov $cmd_quit, %rdi	# | full "quit" command
 	call strcmp
 	test %rsi, %rsi
 	jz .exit
-	jmp _start
+	jmp .read_x
 1:
 
+	# pass the input into the condition
+	# (rax contains input after the conversion)
 	mov %r14, %rbx		# the const operand
 	mov $.meets, %rcx	# jmp to .meets
 	call *%r15		# call the comparison function
 	jmp .else
 
-.meets:				# input meets the condition
-	pushq $expr_then_buf	# use a register?
+	/* input meets the condition */
+.meets:
+	pushq $expr_then_buf
 
 	mov $expr_then, %rsi
 	mov %rax, %rdi
@@ -222,8 +225,9 @@ _start:
 
 	jmp .done
 
+	/* input doesn't meet the condition */
 .else:
-	pushq $expr_else_buf	# use a register?
+	pushq $expr_else_buf
 
 	mov $expr_else, %rsi
 	mov %rax, %rdi
@@ -235,7 +239,7 @@ _start:
 	call u64tos		# rax to string
 
 	# print the expression
-	popq %rsi		# use a register?
+	popq %rsi
 	call print
 
 	# print " = "

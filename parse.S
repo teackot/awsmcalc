@@ -20,9 +20,13 @@ tokenize:
 	xor %rbx, %rbx
 
 	call skip_ws
+
+	# peek at the next char
 	movb (%rsi), %bl	# %rsi to be incremented later
-	test %bl, %bl
+	test %bl, %bl		# \0, end of string
 	jz .tok_done
+
+	/* check if it is an operator */
 	cmp $'+', %bl
 	je .tok_op
 	cmp $'-', %bl
@@ -39,27 +43,36 @@ tokenize:
 	je .tok_op
 	cmp $'x', %bl
 	je .tok_op
+
 	jmp .tok_int
 
 .tok_op:
-	inc %rsi
+	# write an operator token
 	movq %rbx, (%rdi)
 	movq $0, token_op_size(%rdi)
 	add $token_size, %rdi
+
+	# next token
+	inc %rsi
 	jmp tokenize
 	
 .tok_int:
+	# get an integer
 	# TODO: handle NaN
 	mov $10, %rbx
 	mov $-1, %r10
 	call stoi64
 
+	# write an integer token
 	movq $0, (%rdi)
 	movq %rax, token_op_size(%rdi)
 	add $token_size, %rdi
+
+	# next token
 	jmp tokenize
 
 .tok_done:
+	# terminate the array with a -1 "operator"
 	movq $-1, (%rdi)
 	movq $0, token_op_size(%rdi)
 	add $token_size, %rdi
