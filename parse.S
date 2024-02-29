@@ -138,11 +138,6 @@ transform_postfix:
 	jmp .next_token
 .not_x:
 
-	# TODO: unnecessary?
-	# first op is always pushed
-	cmp %rsp, %rbp
-	je .push_op
-
 	cmp $'^', %rax
 	je .pow_pop
 	cmp $'*', %rax
