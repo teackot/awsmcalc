@@ -33,8 +33,8 @@ tokenize:
 	je .tok_op
 	cmp $'*', %bl
 	je .tok_op
-	# cmp $'/', %bl
-	# je .tok_op
+	cmp $'/', %bl
+	je .tok_op
 	cmp $'^', %bl
 	je .tok_op
 	# TODO: count matching parentheses
@@ -299,12 +299,13 @@ exec_postfix:
 	jmp .exec_next
 1:
 
-# 	cmp $'/', %rbx
-# 	jne 1f
-# 	imul %rcx
-# 	push %rax
-# 	jmp .exec_next
-# 1:
+	cmp $'/', %rbx
+	jne 1f
+	cqo
+	idiv %rcx
+	push %rax
+	jmp .exec_next
+1:
 
 	cmp $'^', %rbx
 	jne 1f
