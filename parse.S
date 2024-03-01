@@ -14,6 +14,10 @@ token_size = token_value_size + token_op_size
  *
  * Args: %rsi - string
  *       %rdi - tokens[]
+ *
+ * Returns: %rax - error code
+ *
+ * Error codes: -1 - unexpected symbol, pointed to by %rsi
  */
 .global tokenize
 tokenize:
@@ -59,10 +63,15 @@ tokenize:
 	
 .tok_int:
 	# get an integer
-	# TODO: handle NaN
 	mov $10, %rbx
 	mov $-1, %r10
 	call stoi64
+
+	test %rbx, %rbx		# check for stoi64 errors
+	jz 1f			# success
+	mov $-1, %rax
+	ret
+1:
 
 	# write an integer token
 	movq $0, (%rdi)
@@ -77,6 +86,7 @@ tokenize:
 	movq $-1, (%rdi)
 	movq $0, token_op_size(%rdi)
 	add $token_size, %rdi
+	xor %rax, %rax
 	ret
 
 /*

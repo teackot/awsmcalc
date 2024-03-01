@@ -8,6 +8,9 @@
  * Returns: %rax - resulting number
  *          %rbx - error code
  *          %r8  - numeric string length
+ *
+ * Error codes: -1 - empty string
+ *              -2 - unexpected symbol
  */
 .global stoi64
 stoi64:

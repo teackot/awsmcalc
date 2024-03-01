@@ -14,6 +14,8 @@ result_sep:	.string " = "
 
 err_read:	.string "Could not read the input!\n"
 err_nan:	.string "You should enter an integer!\n"
+err_unex:	.ascii  "Unexpected symbol: \0"
+err_unex_len = . - err_unex - 1
 
 cmd_quit:	.string "quit"
 
@@ -26,8 +28,8 @@ expr_else_buf:	.fill buf_len
 
 .section .bss
 
-.lcomm expr_then, 64 * 16 # token_size = 16
-.lcomm expr_else, 64 * 16 # token_size = 16
+.lcomm expr_then, 64 * 16	# token_size = 16
+.lcomm expr_else, 64 * 16	# token_size = 16
 
 .section .text
 .global _start
@@ -114,54 +116,27 @@ _start:
 	 */
 
 	/* parse the "then" expression */
-
-	# print the "then" prompt
-	mov $then_prompt, %rsi
-	call print
-
-	# read the expression
-	mov $expr_then_buf, %rsi
-	mov $buf_len, %rdx
-	call readline
-
-	jz 1f			# success
-	mov $err_read, %rsi	# read error, panic
-	call panic
 1:
+	mov $then_prompt, %rsi
+	mov $expr_then_buf, %r12
+	mov $buf_len, %rdx
+	mov $expr_then, %r13
+	call get_expr
 
-	# tokenize the expression
-	mov $expr_then_buf, %rsi
-	mov $expr_then, %rdi
-	call tokenize
-
-	# transform to a postfix form
-	mov $expr_then, %rsi
-	call transform_postfix
+	test %rax, %rax
+	jnz 1b
 
 	/* parse the "else" expression */
 
-	# print the "else" prompt
-	mov $else_prompt, %rsi
-	call print
-
-	# read the expression
-	mov $expr_else_buf, %rsi
-	mov $buf_len, %rdx
-	call readline
-
-	jz 1f			# success
-	mov $err_read, %rsi	# read error, panic
-	call panic
 1:
+	mov $else_prompt, %rsi
+	mov $expr_else_buf, %r12
+	mov $buf_len, %rdx
+	mov $expr_else, %r13
+	call get_expr
 
-	# tokenize the expression
-	mov $expr_else_buf, %rsi
-	mov $expr_else, %rdi
-	call tokenize
-
-	# transform to a postfix form
-	mov $expr_else, %rsi
-	call transform_postfix
+	test %rax, %rax
+	jnz 1b
 
 	/*
 	 * Expressions parsed.
@@ -276,3 +251,79 @@ panic:
 	mov $60, %rax
 	mov $-1, %rdi
 	syscall
+
+/*
+ * print_unex() - print an 'unexpected symbol' error message
+ *                with a pointer to the said symbol
+ *
+ * Args: %rsi - prompt
+ *       %r12 - buf
+ *       %rdx - buf size
+ *       %r13 - parsed expr destination
+ *
+ * Returns: %rax - error code
+ */
+get_expr:
+	# print the prompt
+	push %rdx
+	call print		# prompt is in %rsi
+	pop %rdx
+
+	# read the expression
+	mov %r12, %rsi
+	call readline		# buf size is in %rdx
+
+	jz 1f			# success
+	mov $err_read, %rsi	# read error, panic
+	call panic
+1:
+
+	# tokenize the expression
+	mov %r12, %rsi		# string
+	mov %r13, %rdi		# dest
+	call tokenize
+
+	test %rax, %rax		# check for tokenize errors
+	jz 1f			# jump on success
+	mov %rsi, %r9		# unexpected symbol pointer
+	sub %r12, %r9		# unexpected symbol index
+	mov %r12, %rbx
+	call print_unex
+	mov $-1, %rax
+	ret
+1:
+
+	# transform to a postfix form
+	mov %r13, %rsi
+	call transform_postfix
+
+	xor %rax, %rax
+	ret
+
+/*
+ * print_unex() - print an 'unexpected symbol' error message
+ *                with a pointer to the said symbol
+ *
+ * Args: %r9  - symbol index
+ *       %rbx - expression string
+ */
+print_unex:
+	mov $err_unex, %rsi
+	call print
+	mov %rbx, %rsi
+	call print
+	mov $'\n', %rax
+	call putchar
+
+	add $err_unex_len, %r9
+1:
+	mov $' ', %rax
+	call putchar
+	dec %r9
+	jnz 1b
+
+	mov $'^', %rax
+	call putchar
+	mov $'\n', %rax
+	call putchar
+	ret
