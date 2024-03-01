@@ -14,8 +14,9 @@ result_sep:	.string " = "
 
 err_read:	.string "Could not read the input!\n"
 err_nan:	.string "You should enter an integer!\n"
-err_unex:	.ascii  "Unexpected symbol: \0"
+err_unex:	.string  "Unexpected symbol: "
 err_unex_len = . - err_unex - 1
+err_parens:	.string  "Parentheses don't match!\n"
 
 cmd_quit:	.string "quit"
 
@@ -281,14 +282,23 @@ get_expr:
 	# tokenize the expression
 	mov %r12, %rsi		# string
 	mov %r13, %rdi		# dest
+	push %r12
 	call tokenize
+	pop %r12
 
 	test %rax, %rax		# check for tokenize errors
 	jz 1f			# jump on success
+	cmp $-2, %rax		# | parentheses?
+	je .parens_err		# |
 	mov %rsi, %r9		# unexpected symbol pointer
 	sub %r12, %r9		# unexpected symbol index
 	mov %r12, %rbx
 	call print_unex
+	mov $-1, %rax
+	ret
+.parens_err:
+	mov $err_parens, %rsi
+	call print
 	mov $-1, %rax
 	ret
 1:

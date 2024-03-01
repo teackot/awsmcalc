@@ -18,9 +18,17 @@ token_size = token_value_size + token_op_size
  * Returns: %rax - error code
  *
  * Error codes: -1 - unexpected symbol, pointed to by %rsi
+ *              -2 - parentheses don't match
+ *
+ * Modifies: %rax, %rbx, %rsi, %rdi, %r10, %r11, %r12
+ *         + stoi64
  */
 .global tokenize
 tokenize:
+	xor %r11, %r11		# '(' counter
+	xor %r12, %r12		# ')' counter
+
+.tokenize_next:
 	xor %rbx, %rbx
 
 	call skip_ws
@@ -41,11 +49,14 @@ tokenize:
 	je .tok_op
 	cmp $'^', %bl
 	je .tok_op
-	# TODO: count matching parentheses
+	inc %r11
 	cmp $'(', %bl
 	je .tok_op
+	dec %r11
+	inc %r12
 	cmp $')', %bl
 	je .tok_op
+	dec %r12
 	cmp $'x', %bl
 	je .tok_op
 
@@ -59,7 +70,7 @@ tokenize:
 
 	# next token
 	inc %rsi
-	jmp tokenize
+	jmp .tokenize_next
 	
 .tok_int:
 	# get an integer
@@ -79,9 +90,14 @@ tokenize:
 	add $token_size, %rdi
 
 	# next token
-	jmp tokenize
+	jmp .tokenize_next
 
 .tok_done:
+	cmp %r11, %r12		# check if all parentheses match
+	je 1f
+	mov $-2, %rax
+	ret
+1:
 	# terminate the array with a -1 "operator"
 	movq $-1, (%rdi)
 	movq $0, token_op_size(%rdi)
@@ -211,7 +227,6 @@ transform_postfix:
 	jmp .add_pop
 
 	# pop everything until '('
-	# TODO: tokenize() should guarantee that all parens have a pair
 .rparen_pop:
 	pop %rbx
 
