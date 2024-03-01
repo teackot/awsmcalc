@@ -9,8 +9,8 @@ release: awsmcalc
 debug: CFLAGS += -gdwarf-2
 debug: awsmcalc
 
-awsmcalc: main.o fprint.o putchar.o readline.o stoi64.o u64tos.o fj.o strcmp.o skip_ws.o parse.o
-	$(LD) main.o fprint.o putchar.o readline.o stoi64.o u64tos.o fj.o strcmp.o skip_ws.o parse.o -o awsmcalc
+awsmcalc: main.o fprint.o putchar.o readline.o stoi64.o i64tos.o fj.o strcmp.o skip_ws.o parse.o
+	$(LD) main.o fprint.o putchar.o readline.o stoi64.o i64tos.o fj.o strcmp.o skip_ws.o parse.o -o awsmcalc
 
 main.o: main.S
 	$(CC) $(CFLAGS) main.S -o main.o
@@ -27,8 +27,8 @@ readline.o: readline.S
 stoi64.o: stoi64.S
 	$(CC) $(CFLAGS) stoi64.S -o stoi64.o
 
-u64tos.o: u64tos.S
-	$(CC) $(CFLAGS) u64tos.S -o u64tos.o
+i64tos.o: i64tos.S
+	$(CC) $(CFLAGS) i64tos.S -o i64tos.o
 
 fj.o: fj.S
 	$(CC) $(CFLAGS) fj.S -o fj.o

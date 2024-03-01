@@ -1,14 +1,20 @@
 /*
- * u64tos() - converts an unsigned integer to
- *            a null-terminated string
+ * i64tos() - converts an signed integer to a null-terminated string
  *
- * Args: %rax - unsigend integer to convert
+ * Args: %rax - integer to convert
  *       %rbx - radix
  *       %rdi - buffer
  */
-.global u64tos
-u64tos:
+.global i64tos
+i64tos:
 	mov %rdi, %rsi
+	xor %r8, %r8		# is_neg: bool
+
+	# set %r8 and invert the sign if negative
+	test %rax, %rax
+	jns .next
+	mov $1, %r8
+	neg %rax
 
 	/* convert (reversed) */
 .next:
@@ -20,15 +26,23 @@ u64tos:
 	test %rax, %rax		# check if there's still anything left
 	jnz .next
 
+	# add a '-' if negative
+	test %r8, %r8
+	jz .null
+	movb $'-', (%rdi)
+	inc %rdi
+
+.null:
 	movb $0, (%rdi)		# null-terminate the string
 
 	/* reverse */
 	dec %rdi		# point to the last char
 .swap:
-	movb (%rsi), %al	# | swap memory at rdi and rsi
-	movb (%rdi), %bl	# |
-	movb %al, (%rdi)	# |
-	movb %bl, (%rsi)	# |
+	# swap memory at rdi and rsi
+	movb (%rsi), %al
+	movb (%rdi), %bl
+	movb %al, (%rdi)
+	movb %bl, (%rsi)
 
 	inc %rsi		# | next pair
 	dec %rdi		# |

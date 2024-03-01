@@ -212,7 +212,7 @@ _start:
 .done:
 	mov $10, %rbx		# base 10
 	mov $buf, %rdi		# into the buf
-	call u64tos		# rax to string
+	call i64tos		# rax to string
 
 	# print the expression
 	popq %rsi
@@ -254,8 +254,7 @@ panic:
 	syscall
 
 /*
- * print_unex() - print an 'unexpected symbol' error message
- *                with a pointer to the said symbol
+ * get_expr() - prompt for, read and parse an expression
  *
  * Args: %rsi - prompt
  *       %r12 - buf
