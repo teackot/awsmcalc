@@ -4,13 +4,13 @@ CFLAGS = --64
 
 all: debug
 
-release: expr
+release: awsmcalc
 
 debug: CFLAGS += -gdwarf-2
-debug: expr
+debug: awsmcalc
 
-expr: main.o fprint.o putchar.o readline.o stoi64.o u64tos.o fj.o strcmp.o skip_ws.o parse.o
-	$(LD) main.o fprint.o putchar.o readline.o stoi64.o u64tos.o fj.o strcmp.o skip_ws.o parse.o -o expr
+awsmcalc: main.o fprint.o putchar.o readline.o stoi64.o u64tos.o fj.o strcmp.o skip_ws.o parse.o
+	$(LD) main.o fprint.o putchar.o readline.o stoi64.o u64tos.o fj.o strcmp.o skip_ws.o parse.o -o awsmcalc
 
 main.o: main.S
 	$(CC) $(CFLAGS) main.S -o main.o
