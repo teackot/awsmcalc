@@ -230,6 +230,8 @@ _start:
 
 	mov $'\n', %rax
 	call putchar
+	mov $'\n', %rax
+	call putchar
 
 	jmp .read_x
 
