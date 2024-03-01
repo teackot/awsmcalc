@@ -52,7 +52,9 @@ _start:
 1:
 
 	/* parse the operator, set %r15 to the corresponding function */
-	mov $buf + 2, %rsi
+	mov $buf, %rsi
+	call skip_ws
+	add $2, %rsi
 	movw -2(%rsi), %ax
 	cmp $'<', %al		# <x
 	je .ilx
